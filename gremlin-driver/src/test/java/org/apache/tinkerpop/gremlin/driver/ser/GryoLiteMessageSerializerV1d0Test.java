@@ -29,8 +29,8 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedEdge;
-import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedVertex;
+import org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceEdge;
+import org.apache.tinkerpop.gremlin.structure.util.reference.ReferenceVertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
@@ -49,16 +49,16 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class GryoMessageSerializerV1d0Test {
+public class GryoLiteMessageSerializerV1d0Test {
     private static final Map<String, Object> config = new HashMap<String, Object>() {{
-        put(GryoMessageSerializerV1d0.TOKEN_SERIALIZE_RESULT_TO_STRING, true);
+        put(AbstractGryoMessageSerializerV1d0.TOKEN_SERIALIZE_RESULT_TO_STRING, true);
     }};
 
     private UUID requestId = UUID.fromString("6457272A-4018-4538-B9AE-08DD5DDC0AA1");
     private ResponseMessage.Builder responseMessageBuilder = ResponseMessage.build(requestId);
     private static ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
 
-    public MessageSerializer binarySerializer = new GryoMessageSerializerV1d0();
+    public MessageSerializer binarySerializer = new GryoLiteMessageSerializerV1d0();
 
     @Test
     public void shouldSerializeEdge() throws Exception {
@@ -73,19 +73,18 @@ public class GryoMessageSerializerV1d0Test {
         final ResponseMessage response = convertBinary(iterable);
         assertCommon(response);
 
-        final List<DetachedEdge> edgeList = (List<DetachedEdge>) response.getResult().getData();
+        final List<ReferenceEdge> edgeList = (List<ReferenceEdge>) response.getResult().getData();
         assertEquals(1, edgeList.size());
 
-        final DetachedEdge deserializedEdge = edgeList.get(0);
+        final ReferenceEdge deserializedEdge = edgeList.get(0);
         assertEquals(e.id(), deserializedEdge.id());
         assertEquals("test", deserializedEdge.label());
 
-        assertEquals(123, deserializedEdge.values("abc").next());
-        assertEquals(1, IteratorUtils.count(deserializedEdge.properties()));
+        assertEquals(0, IteratorUtils.count(deserializedEdge.properties()));
         assertEquals(v1.id(), deserializedEdge.outVertex().id());
-        assertEquals(Vertex.DEFAULT_LABEL, deserializedEdge.outVertex().label());
+        assertEquals("", deserializedEdge.outVertex().label());
         assertEquals(v2.id(), deserializedEdge.inVertex().id());
-        assertEquals(Vertex.DEFAULT_LABEL, deserializedEdge.inVertex().label());
+        assertEquals("", deserializedEdge.inVertex().label());
     }
 
     @Test
@@ -108,24 +107,14 @@ public class GryoMessageSerializerV1d0Test {
         final ResponseMessage response = convertBinary(list);
         assertCommon(response);
 
-        final List<DetachedVertex> vertexList = (List<DetachedVertex>) response.getResult().getData();
+        final List<ReferenceVertex> vertexList = (List<ReferenceVertex>) response.getResult().getData();
         assertEquals(1, vertexList.size());
 
-        final DetachedVertex deserializedVertex = vertexList.get(0);
-        assertEquals(0l, deserializedVertex.id());
-        assertEquals(Vertex.DEFAULT_LABEL, deserializedVertex.label());
+        final ReferenceVertex deserializedVertex = vertexList.get(0);
+        assertEquals(0L, deserializedVertex.id());
+        assertEquals("", deserializedVertex.label());
 
-        assertEquals(1, IteratorUtils.count(deserializedVertex.properties()));
-
-        final List<Object> deserializedInnerList = (List<Object>) deserializedVertex.values("friends").next();
-        assertEquals(3, deserializedInnerList.size());
-        assertEquals("x", deserializedInnerList.get(0));
-        assertEquals(5, deserializedInnerList.get(1));
-
-        final Map<String, Object> deserializedInnerInnerMap = (Map<String, Object>) deserializedInnerList.get(2);
-        assertEquals(2, deserializedInnerInnerMap.size());
-        assertEquals(500, deserializedInnerInnerMap.get("x"));
-        assertEquals("some", deserializedInnerInnerMap.get("y"));
+        assertEquals(0, IteratorUtils.count(deserializedVertex.properties()));
     }
 
     @Test
@@ -142,11 +131,9 @@ public class GryoMessageSerializerV1d0Test {
         assertEquals(1, deserializedMap.size());
 
         final Vertex deserializedMarko = deserializedMap.keySet().iterator().next();
-        assertEquals("marko", deserializedMarko.values("name").next().toString());
+        assertEquals(0, IteratorUtils.count(deserializedMarko.properties()));
         assertEquals(1, deserializedMarko.id());
-        assertEquals(Vertex.DEFAULT_LABEL, deserializedMarko.label());
-        assertEquals(29, deserializedMarko.values("age").next());
-        assertEquals(2, IteratorUtils.count(deserializedMarko.properties()));
+        assertEquals("", deserializedMarko.label());
 
         assertEquals(new Integer(1000), deserializedMap.values().iterator().next());
     }
